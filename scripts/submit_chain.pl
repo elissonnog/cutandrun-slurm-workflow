@@ -3,17 +3,20 @@ use strict;
 use warnings;
 
 use Cwd qw(abs_path);
+use File::Basename qw(basename);
 use Getopt::Long qw(GetOptions);
 
 my %opt = (
     experiment_dir => '.',
     sbatch_cmd     => 'sbatch',
+    sbatch_args    => [],
     dry_run        => 0,
 );
 
 GetOptions(
     'experiment-dir=s' => \$opt{experiment_dir},
     'sbatch-cmd=s'     => \$opt{sbatch_cmd},
+    'sbatch-arg=s@'    => \$opt{sbatch_args},
     'dry-run'          => \$opt{dry_run},
     'help'             => \$opt{help},
 ) or die usage();
@@ -26,27 +29,23 @@ if ($opt{help}) {
 my $dir = abs_path($opt{experiment_dir})
     or die "Experiment directory not found: $opt{experiment_dir}\n";
 
-my @candidates = (
-    "$dir/1_fastqc.sh",
-    "$dir/2_bowtie.sh",
-    "$dir/3_bowtie_coli.sh",
-    "$dir/4_picard.sh",
-    "$dir/5_samtools.sh",
-    "$dir/6_conv.sh",
-    "$dir/7_conv2.sh",
-    "$dir/8_spike.sh",
-    "$dir/9_seacr.sh",
-);
+opendir my $dh, $dir or die "Cannot open directory $dir: $!\n";
+my @candidates = sort {
+    step_number($a) <=> step_number($b) || basename($a) cmp basename($b)
+} map {
+    "$dir/$_"
+} grep {
+    /^\d+_.*\.sh$/
+} readdir $dh;
+closedir $dh;
 
-for my $script (@candidates) {
-    die "Missing script: $script\n" if !-f $script;
-}
+die "No numbered step scripts found in $dir\n" if !@candidates;
 
 my $previous_job_id = '';
 my $dry_run_job_id = 0;
 
 for my $script (@candidates) {
-    my @cmd = ($opt{sbatch_cmd});
+    my @cmd = ($opt{sbatch_cmd}, @{$opt{sbatch_args}});
     push @cmd, "--dependency=afterok:$previous_job_id" if $previous_job_id ne '';
     push @cmd, $script;
 
@@ -57,10 +56,11 @@ for my $script (@candidates) {
         next;
     }
 
-    my $command = join(' ', @cmd);
-    print "Submitting: $command\n";
-    my $output = `$command 2>&1`;
-    die "Failed to submit $script\n$output" if $?;
+    print "Submitting:";
+    print " $_" for @cmd;
+    print "\n";
+    my ($output, $exit_code) = capture_command(@cmd);
+    die "Failed to submit $script\n$output" if $exit_code != 0;
 
     if ($output =~ /Submitted batch job (\d+)/) {
         my $current_job_id = $1;
@@ -83,9 +83,28 @@ Usage:
   perl submit_chain.pl [--experiment-dir PATH] [--dry-run] [--sbatch-cmd CMD]
 
 Options:
-  --experiment-dir PATH  Directory that contains generated step scripts
+  --experiment-dir PATH  Directory that contains generated numbered step scripts
   --dry-run              Print commands without submitting
   --sbatch-cmd CMD       Override the sbatch executable name
+  --sbatch-arg ARG       Extra argument to pass to sbatch (repeatable)
   --help                 Show this message
 USAGE
+}
+
+sub step_number {
+    my ($path) = @_;
+    my $name = basename($path);
+    $name =~ /^(\d+)_/ or return 10_000;
+    return $1;
+}
+
+sub capture_command {
+    my @cmd = @_;
+
+    open my $fh, '-|', @cmd or die "Failed to execute @cmd: $!\n";
+    local $/;
+    my $output = <$fh>;
+    my $closed = close $fh;
+    my $exit_code = $closed ? 0 : ($? >> 8);
+    return ($output // '', $exit_code);
 }

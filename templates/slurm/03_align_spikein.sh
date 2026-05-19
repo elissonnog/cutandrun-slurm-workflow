@@ -2,7 +2,6 @@
 #SBATCH --job-name=bowtie2
 #SBATCH -o bowtie2_%A_%a.out
 #SBATCH -e bowtie2_%A_%a.err
-#SBATCH --partition=long
 #SBATCH --time=40:00:00
 #SBATCH --mem=200G
 #SBATCH --ntasks=4 # Set this to match the -p parameter in bowtie2
@@ -41,4 +40,3 @@ bowtie2 --end-to-end --very-sensitive \
 
 #seqDepthDouble=`samtools view -F 0x04 seqDepth=$((seqDepthDouble/2))
 #echo $seqDepth >$projPath/alignment/sam/bowtie2_summary/${sample}_bowtie2_spikeIn.seqDepth
-

@@ -106,10 +106,6 @@ Tasks:
 - keep the current caveat that duplicate removal is generated but not used for peak calling unless the pipeline logic is changed
 - add one small public example or dry-run walkthrough
 
-Exit criteria:
-
-- an outside user can understand the workflow inputs, job order, and required references without reading local lab notes
-
 ### Phase 2: Extract A Narrow Analysis Package
 
 Goal:
@@ -121,19 +117,6 @@ Recommended scope for version 0.1:
 - network characterization of CUT&RUN-derived feature sets
 - cluster-wise and network-wise enrichment helpers
 - utilities that join peak-level results to normalized count matrices
-
-Tasks:
-
-- move reusable functions into standalone `R/` scripts
-- replace global state with explicit function arguments
-- separate compute functions from plots and file export
-- build a small toy dataset
-- add unit tests for the extracted functions
-- rebuild the Rmd as a vignette or worked example instead of the source of truth
-
-Exit criteria:
-
-- the package can be installed locally and its main functions run from a clean R session on example data
 
 ### Phase 3: Prepare The Publication Layer
 
@@ -148,10 +131,6 @@ Tasks:
 - test the same analysis logic on a second dataset
 - decide whether the preprint centers on the biology, with the software as infrastructure, or on the reproducible workflow itself
 
-Exit criteria:
-
-- the GitHub repo and manuscript figures tell the same story and can be traced to the same code paths
-
 ## Bottom Line
 
 This project has real scientific value, but its strongest path is not "publish the current Rmd as-is." The best route is:
@@ -159,5 +138,3 @@ This project has real scientific value, but its strongest path is not "publish t
 - clean CUT&RUN workflow repo first
 - narrow GitHub research package second
 - preprint or manuscript companion resource third
-
-That path is realistic and publishable if the reproducibility layer is pinned and the downstream Rmd is reduced to a clear, reusable analytic core.

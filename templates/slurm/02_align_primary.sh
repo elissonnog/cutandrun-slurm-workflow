@@ -2,7 +2,6 @@
 #SBATCH --job-name=bowtie
 #SBATCH -o outbow_%A_%a.out
 #SBATCH -e outbow_%A_%a.err
-#SBATCH --partition=long
 #SBATCH --time=40:00:00
 #SBATCH --mem=200G
 #SBATCH --ntasks=4 # Set this to match the -p parameter in bowtie2

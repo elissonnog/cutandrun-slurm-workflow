@@ -52,15 +52,3 @@ Because of that, the staged repo currently preserves workflow logic, but not a f
 ## Important Caveat
 
 The original pipeline computes duplicate-marked and duplicate-removed SAM files, but downstream peak-calling steps still operate on the original mapped SAM-derived path. So the workflow should **not** currently be described as a deduplicated peak-calling pipeline.
-
-## Bottom Line
-
-Current evidence supports this statement:
-
-> The staged workflow is a faithful cleanup of the original local CUT&RUN 1-9 pipeline logic.
-
-Current evidence does **not** yet support this stronger statement:
-
-> The staged repository alone is sufficient to reproduce the original Henikoff/SEACR-style analysis exactly.
-
-That stronger claim will require pinned configs, pinned reference assets, pinned runtime versions, and one canonical example run provenance.

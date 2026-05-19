@@ -1,0 +1,5 @@
+asset_id	description	path_or_uri	version_or_build	notes
+genome_index	Bowtie2 genome index prefix	/path/to/bowtie2/genome/prefix	GRCh38_noalt_as	Primary genome alignment index
+spikein_index	Bowtie2 spike-in index prefix	/path/to/bowtie2/spikein/prefix	Ecoli_u00096	Spike-in alignment index
+chrom_sizes	Chromosome sizes file	/path/to/chrom.sizes	hg38	Used by bedtools genomecov
+seacr	SEACR executable	/path/to/SEACR_1.3.sh	1.3	Peak calling script

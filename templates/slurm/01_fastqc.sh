@@ -2,7 +2,6 @@
 #SBATCH --job-name=fastQC
 #SBATCH -o fastq_%A_%a.out
 #SBATCH -e fastq_%A_%a.err
-#SBATCH --partition long
 #SBATCH --ntasks 8
 #SBATCH --time 24:00:00
 #SBATCH --mem=96G

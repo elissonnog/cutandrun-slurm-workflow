@@ -1,0 +1,7 @@
+tool	version	source_or_module	notes
+fastqc	0.12.1	bbc2/fastqc/fastqc-0.12.1	Raw read QC
+bowtie2	2.5.1	bbc2/bowtie2/bowtie2-2.5.1	Genome and spike-in alignment
+samtools	1.17	bbc2/samtools/samtools-1.17	Filtering and BAM processing
+bedtools	unknown	bbc2/bedtools/	BED conversion and coverage
+picard	3.0.0	bbc2/picard/picard-3.0.0	Duplicate marking/removal
+deeptools	unknown	bbc2/deeptools/	Optional bigWig and heatmap generation

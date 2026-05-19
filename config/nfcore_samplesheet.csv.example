@@ -1,0 +1,4 @@
+group,replicate,fastq_1,fastq_2,control
+sample_mark,1,/path/to/sample_mark_rep1_R1.fastq.gz,/path/to/sample_mark_rep1_R2.fastq.gz,igg_control
+sample_mark,2,/path/to/sample_mark_rep2_R1.fastq.gz,/path/to/sample_mark_rep2_R2.fastq.gz,igg_control
+igg_control,1,/path/to/igg_control_rep1_R1.fastq.gz,/path/to/igg_control_rep1_R2.fastq.gz,

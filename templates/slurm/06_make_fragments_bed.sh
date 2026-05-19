@@ -2,7 +2,6 @@
 #SBATCH --job-name=formatConv
 #SBATCH -o conv_%A_%a.out
 #SBATCH -e conv_%A_%a.err
-#SBATCH --partition=long
 #SBATCH --time=40:00:00
 #SBATCH --mem=200G
 #SBATCH --ntasks=8

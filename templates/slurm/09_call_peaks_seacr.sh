@@ -2,7 +2,6 @@
 #SBATCH --job-name=seacr
 #SBATCH --output=SEACR_%A_%a.out
 #SBATCH --error=SEACR_%A_%a.err
-#SBATCH --partition=long
 #SBATCH --time=20:00:00
 #SBATCH --mem=200G
 #SBATCH --ntasks=40
@@ -18,7 +17,14 @@ require_var SEACR_SCRIPT
 
 mkdir -p "$projPath/peakCalling/SEACR"
 
-control="$(lookup_control "$sample" "${CONTROL_MAP_FILE:-}")"
+if ! control="$(lookup_control "$sample" "${CONTROL_MAP_FILE:-}" 2>/dev/null)"; then
+  if sample_is_control "$sample" "${CONTROL_MAP_FILE:-}"; then
+    printf 'Skipping SEACR for control-only sample %s\n' "$sample"
+    exit 0
+  fi
+  printf 'No control mapping found for non-control sample %s\n' "$sample" >&2
+  exit 1
+fi
 
 printf 'Running SEACR for sample %s with control %s\n' "$sample" "$control"
 

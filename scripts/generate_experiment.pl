@@ -9,16 +9,18 @@ use File::Path qw(make_path);
 use Getopt::Long qw(GetOptions);
 
 my %opt = (
-    repo_root => dirname($RealBin),
+    repo_root           => dirname($RealBin),
+    include_postprocess => 0,
 );
 
 GetOptions(
-    'project-dir=s' => \$opt{project_dir},
+    'project-dir|analysis-dir=s' => \$opt{project_dir},
     'sample-file=s' => \$opt{sample_file},
     'experiment=s'  => \$opt{experiment},
     'mail-user=s'   => \$opt{mail_user},
     'output-dir=s'  => \$opt{output_dir},
     'repo-root=s'   => \$opt{repo_root},
+    'include-postprocess!' => \$opt{include_postprocess},
     'help'          => \$opt{help},
 ) or die usage();
 
@@ -27,10 +29,12 @@ if ($opt{help}) {
     exit 0;
 }
 
-$opt{project_dir} ||= prompt('Enter the project path (project-dir): ');
+$opt{project_dir} ||= prompt('Enter the analysis directory (project-dir): ');
 $opt{sample_file} ||= prompt('Enter the sample file path: ');
 $opt{experiment}  ||= prompt('Enter the experiment name: ');
-$opt{mail_user}   ||= prompt('Enter the email for Slurm notifications (optional): ', 1);
+if (!defined $opt{mail_user}) {
+    $opt{mail_user} = (-t STDIN) ? prompt('Enter the email for Slurm notifications (optional): ', 1) : '';
+}
 
 $opt{output_dir} ||= $opt{experiment};
 
@@ -41,25 +45,52 @@ for my $required (qw(project_dir sample_file experiment output_dir repo_root)) {
 die "Sample file not found: $opt{sample_file}\n" if !-f $opt{sample_file};
 
 my $template_dir = "$opt{repo_root}/templates/slurm";
+my $postprocess_dir = "$opt{repo_root}/templates/postprocess";
 my $config_dir   = "$opt{repo_root}/config";
 my $scripts_dir  = "$opt{repo_root}/scripts";
 
 for my $dir ($template_dir, $config_dir, $scripts_dir) {
     die "Required directory not found: $dir\n" if !-d $dir;
 }
+die "Required directory not found: $postprocess_dir\n" if $opt{include_postprocess} && !-d $postprocess_dir;
 
 my @samples = read_samples($opt{sample_file});
 die "No sample IDs found in $opt{sample_file}\n" if !@samples;
 
 make_path($opt{output_dir}) unless -d $opt{output_dir};
+my $rendered_sample_file = "$opt{output_dir}/samples.txt";
+copy($opt{sample_file}, $rendered_sample_file)
+    or die "Failed to copy sample file to $rendered_sample_file: $!\n";
 
-for my $filename (qw(common.sh 1_fastqc.sh 2_bowtie.sh 3_bowtie_coli.sh 4_picard.sh 5_samtools.sh 6_conv.sh 7_conv2.sh 8_spike.sh 9_seacr.sh)) {
+my @templates = (
+    [ "$template_dir/common.sh", 'common.sh' ],
+    map { [ "$template_dir/$_", $_ ] } qw(
+        01_fastqc.sh
+        02_align_primary.sh
+        03_align_spikein.sh
+        04_mark_duplicates.sh
+        05_fragment_lengths.sh
+        06_make_fragments_bed.sh
+        07_bin_fragments.sh
+        08_spikein_normalize.sh
+        09_call_peaks_seacr.sh
+    ),
+);
+
+if ($opt{include_postprocess}) {
+    push @templates,
+        [ "$postprocess_dir/10_make_bigwig.sh", '10_make_bigwig.sh' ],
+        [ "$postprocess_dir/11_plot_heatmap.sh", '11_plot_heatmap.sh' ];
+}
+
+for my $template (@templates) {
+    my ($input_file, $output_name) = @$template;
     render_template(
-        input_file  => "$template_dir/$filename",
-        output_file => "$opt{output_dir}/$filename",
+        input_file  => $input_file,
+        output_file => "$opt{output_dir}/$output_name",
         sample_count => scalar @samples,
         project_dir => $opt{project_dir},
-        sample_file => $opt{sample_file},
+        sample_file => $rendered_sample_file,
         mail_user   => $opt{mail_user},
     );
 }
@@ -73,10 +104,12 @@ chmod 0755, "$opt{output_dir}/submit_chain.pl"
 
 print "Experiment directory created: $opt{output_dir}\n";
 print "Samples detected: " . scalar(@samples) . "\n";
+print "Copied sample manifest to: $rendered_sample_file\n";
 print "Next steps:\n";
 print "  1. Edit $opt{output_dir}/pipeline.env\n";
 print "  2. Edit $opt{output_dir}/control_map.tsv\n";
 print "  3. Dry-run submission with: perl $opt{output_dir}/submit_chain.pl --dry-run\n";
+print "  4. Optional: generated post-processing steps 10-11 are included\n" if $opt{include_postprocess};
 
 sub usage {
     return <<"USAGE";
@@ -84,12 +117,15 @@ Usage:
   perl scripts/generate_experiment.pl --project-dir PATH --sample-file FILE --experiment NAME [options]
 
 Options:
-  --project-dir PATH   Directory where workflow outputs will be written
+  --project-dir PATH   Analysis directory where workflow outputs will be written
+  --analysis-dir PATH  Alias for --project-dir
   --sample-file FILE   Plain-text file with one sample ID per line
   --experiment NAME    Name of the generated experiment directory
   --mail-user EMAIL    Email for Slurm END/FAIL notifications
   --output-dir PATH    Output directory for the generated scripts (defaults to experiment name)
   --repo-root PATH     Override repo root discovery
+  --include-postprocess
+                       Also generate optional deepTools post-processing steps 10-11
   --help               Show this message
 USAGE
 }

@@ -40,6 +40,14 @@ require_var() {
   fi
 }
 
+require_file() {
+  local path="$1"
+  if [[ ! -f "$path" ]]; then
+    printf 'Required file not found: %s\n' "$path" >&2
+    exit 1
+  fi
+}
+
 lookup_control() {
   local sample_name="$1"
   local control_map_file="$2"
@@ -64,4 +72,21 @@ lookup_control() {
   fi
 
   printf '%s\n' "$control_name"
+}
+
+sample_is_control() {
+  local sample_name="$1"
+  local control_map_file="$2"
+
+  if [[ ! -f "$control_map_file" ]]; then
+    printf 'Missing control map: %s\n' "$control_map_file" >&2
+    exit 1
+  fi
+
+  awk -F'\t' -v sample="$sample_name" '
+    BEGIN { found = 0 }
+    NR == 1 && $1 == "sample" && $2 == "control" { next }
+    $2 == sample { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$control_map_file"
 }

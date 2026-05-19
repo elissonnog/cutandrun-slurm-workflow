@@ -59,6 +59,10 @@ if [[ -n "${NEXTFLOW_WORKDIR:-}" ]]; then
   cmd+=(-work-dir "$NEXTFLOW_WORKDIR")
 fi
 
+if [[ "${NEXTFLOW_RESUME:-false}" == "true" ]]; then
+  cmd+=(-resume)
+fi
+
 printf 'Running:'
 printf ' %q' "${cmd[@]}"
 printf '\n'
