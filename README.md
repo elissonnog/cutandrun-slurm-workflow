@@ -1,126 +1,85 @@
-# CUT&RUN Workflow for Slurm
+# CUT&RUN workflow for Slurm
 
-## Overview
+A paired-end CUT&RUN/CUT&Tag workflow for HPC systems using Slurm. The workflow
+runs FASTQ QC, primary and spike-in alignment, duplicate reporting, fragment
+processing, spike-in normalization, and SEACR peak calling. Optional steps
+generate bigWig tracks and heatmaps with deepTools.
 
-This repository contains Slurm templates and helper scripts for CUT&RUN processing, including FASTQ quality control, primary and spike-in alignment, duplicate marking and removal, fragment processing, spike-in-normalized bedGraph generation, and SEACR peak calling. Optional post-processing steps generate bigWig files and heatmaps. Wrapper scripts for `nf-core/cutandrun` are also included.
+## Requirements
 
-## Execution Modes
+- Bash, Perl, and Slurm
+- FastQC, Bowtie2, SAMtools, BEDTools, Picard, and SEACR available on `PATH`
+  or through the modules configured in `pipeline.env`
+- paired FASTQ files
+- primary-genome and spike-in Bowtie2 indexes
+- chromosome sizes, the SEACR script, and a Picard JAR
+- optional: deepTools for bigWig and heatmap generation
 
-Two execution modes are provided:
+The sample manifest contains one sample ID per line. `control_map.tsv` maps
+each treatment sample to its matched control; control samples must also be in
+the sample manifest.
 
-- a template-based Slurm workflow via `bin/cutandrun-init` and `bin/cutandrun-submit`
-- wrapper scripts for `nf-core/cutandrun` in `nextflow/`
+## Run the Slurm workflow
 
-## Workflow Summary
-
-Core processing steps:
-
-1. `01_fastqc.sh`
-2. `02_align_primary.sh`
-3. `03_align_spikein.sh`
-4. `04_mark_duplicates.sh`
-5. `05_fragment_lengths.sh`
-6. `06_make_fragments_bed.sh`
-7. `07_bin_fragments.sh`
-8. `08_spikein_normalize.sh`
-9. `09_call_peaks_seacr.sh`
-
-Optional post-processing steps:
-
-10. `10_make_bigwig.sh`
-11. `11_plot_heatmap.sh`
-
-```mermaid
-flowchart LR
-  A["Slurm template workflow"] --> S01["01 FastQC"]
-  S01 --> S02["02 Primary alignment"]
-  S02 --> S03["03 Spike-in alignment"]
-  S03 --> S04["04 Mark/remove duplicates"]
-  S04 --> S05["05 Fragment lengths"]
-  S05 --> S06["06 BAM/BED fragments"]
-  S06 --> S07["07 Fragment bins"]
-  S07 --> S08["08 Spike-in normalization"]
-  S08 --> S09["09 SEACR peak calling"]
-  S09 --> S10["10 bigWig generation"]
-  S10 --> S11["11 Heatmap generation"]
-  B["Alternative execution path"] --> N1["nextflow/run_nfcore_cutandrun.sh"]
-  N1 --> N2["nf-core/cutandrun"]
-```
-
-## Installation and Requirements
-
-The Slurm workflow requires:
-
-- Bash
-- Perl
-- a Slurm environment for job submission
-- project-specific reference assets and configuration files
-
-End-to-end execution also requires the relevant analysis tools for the chosen path, including `fastqc`, `bowtie2`, `samtools`, `bedtools`, `picard`, `SEACR`, optional `deepTools`, and optionally `nextflow` for the wrapper-based execution path.
-
-## Usage
-
-Minimal Slurm workflow:
+Generate an experiment directory:
 
 ```bash
 bin/cutandrun-init \
-  --project-dir /path/to/project \
+  --project-dir /path/to/analysis \
   --sample-file examples/slurm-dry-run/samples.txt \
-  --experiment demo_run
+  --experiment cutandrun_run
 ```
 
-Dry-run the submission chain:
+Edit `cutandrun_run/pipeline.env` and
+`cutandrun_run/control_map.tsv`, then inspect the submission plan:
 
 ```bash
-bin/cutandrun-submit --experiment-dir demo_run --dry-run
+bin/cutandrun-submit --experiment-dir cutandrun_run --dry-run
 ```
 
-Optional post-processing can be included at generation time:
+Submit the dependency chain:
+
+```bash
+bin/cutandrun-submit --experiment-dir cutandrun_run
+```
+
+To include bigWig and heatmap jobs when the experiment is generated:
 
 ```bash
 bin/cutandrun-init \
-  --project-dir /path/to/project \
+  --project-dir /path/to/analysis \
   --sample-file examples/slurm-dry-run/samples.txt \
-  --experiment demo_run \
+  --experiment cutandrun_run \
   --include-postprocess
 ```
 
-For the wrapper-based alternative:
+The main outputs are written below `--project-dir`:
+
+- `fastq_output/` for FastQC reports
+- `alignment/bam/`, `alignment/bed/`, and `alignment/bedgraph/`
+- `peakCalling/SEACR/` for peak calls
+- optional `alignment/bigwig/` and `qc/deeptools/`
+
+Detailed input and output conventions are in
+[docs/inputs.md](docs/inputs.md) and [docs/outputs.md](docs/outputs.md).
+
+## Optional nf-core/cutandrun wrapper
 
 ```bash
+cp config/nextflow.env.example config/nextflow.env
+# Edit config/nextflow.env and the nf-core samplesheet first.
 bash nextflow/run_nfcore_cutandrun.sh config/nextflow.env
 ```
 
-Additional usage notes are provided in:
+The custom Slurm path and the nf-core wrapper are separate execution options.
+The templates generate duplicate-marked and duplicate-removed files, but the
+current fragment and peak-calling path uses the original mapped alignment.
+Reference compatibility and study-specific parameters must be confirmed before
+an end-to-end run.
 
-- `docs/quickstart.md`
-- `docs/inputs.md`
-- `docs/outputs.md`
-- `docs/reproducibility.md`
+## Contribution
 
-## Inputs, Outputs, and Reproducibility
-
-Project-specific reference assets, control assignments, and tool paths are supplied through configuration files. Input requirements, output locations, and reproducibility notes are documented in:
-
-- `docs/inputs.md`
-- `docs/outputs.md`
-- `docs/reproducibility.md`
-
-## Local Validation
-
-Smoke-test assets are provided in `tests/smoke/`. On May 19, 2026, the local smoke test rendered a demo experiment bundle from the example sample manifest and dry-ran the full `01` to `11` submission chain on macOS. This validates workflow generation and submission ordering, but not end-to-end biological execution.
-
-## Repository Layout
-
-- `bin/`: user-facing command entrypoints
-- `templates/slurm/`: core Slurm workflow templates
-- `templates/postprocess/`: optional post-processing templates
-- `scripts/`: implementation scripts used by the `bin/` wrappers
-- `config/`: example configuration files
-- `nextflow/`: `nf-core/cutandrun` wrappers
-- `examples/`: minimal example inputs
-- `tests/smoke/`: local smoke-test assets
-- `docs/`: workflow documentation
+Developed during my postdoctoral research at Van Andel Institute.
 
 ## References
 

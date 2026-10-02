@@ -2,7 +2,7 @@
 
 This repository preserves the local workflow logic, but reproducibility still depends on pinning the exact assets used for a given run.
 
-Before treating a run as publication-grade, record:
+For each run, record:
 
 1. genome Bowtie2 index prefix
 2. spike-in Bowtie2 index prefix

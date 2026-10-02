@@ -1,6 +1,7 @@
 # Smoke Tests
 
-This directory tracks the same local checks summarized in `docs/development/validation.md`.
+These checks validate script syntax, experiment rendering, and Slurm dependency
+ordering without submitting jobs.
 
 Main script:
 
